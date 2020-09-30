@@ -72,10 +72,16 @@ for user in test_index[0:100]:
         Adj_mat.setdiag(1)
         Adj_mat[Adj_mat>0] = 1
     #------------------------------------------------------------        
-        for indexes in range(num_users):
-            Adj_mat[prio_edge[0][indexes],prio_edge[1][indexes]]= 0
+        # for indexes in range(num_users):
+        #     Adj_mat[prio_edge[0][indexes],prio_edge[1][indexes]]= 0
         Adj_mat = Adj_mat.tocoo()
-        edge_index_new = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
+
+        cat = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
+        
+        bb = cat[:, edge_mask.argsort()[:]]
+        
+        edge_index_new = torch.tensor(np.delete(np.array(bb),aa[0][:num_users],1),dtype=torch.long) # removing the edges(one-side removal)
+        #edge_index_new = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
 
     #using this features to predict the class:
         log_logists_new = model(x,edge_index_new)
