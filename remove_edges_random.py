@@ -82,8 +82,19 @@ def sort2edge(cat,aa3,aa4):
 def revere_indexes(r):
     return r[::-1]
 
-explainer = GNNExplainer(model, epochs=200)
+def find_indx(ls1,ls2):
+    ls= []
+    for i in ls1:
+        cnt=0
+        for j in ls2:
+            if i==j:
+                ls.append(cnt)
+            cnt+=1 
+    return ls
 
+
+
+#random removal of edges:
 test_index = np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test)).tolist()
 hav_distance = [] #distance between the true and predcited labels for each user
 latlon_tr = [] #true latitutde and longitude of the users
@@ -93,37 +104,32 @@ num_us = []
 user_id = []
 user_add = 0
 
-for user in test_index[0:10]:
-    #explaining the node
-    node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
+rand_edges = np.arange(211451)
 
+for user in tqdm(test_index[0:10]):
     #priotizig the edges based on explaination
-    prio_edge = priority_edges(edge_index,user)
-    aa1 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
-    aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
+    prio_edge = priority_edges(edge_index,user)    
     
-    
-    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)]:
+    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)-1]:
     #------------------------------------------------------------
         Adj_mat = A.copy()
         Adj_mat.setdiag(1)
         Adj_mat[Adj_mat>0] = 1
-    #------------------------------------------------------------        
-#         for indexes in range(num_users):
-#             Adj_mat[prio_edge[0][indexes],prio_edge[1][indexes]]= 0
-#             Adj_mat[prio_edge[1][indexes],prio_edge[0][indexes]]= 0
+
         Adj_mat = Adj_mat.tocoo()
         
         cat = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
-        
         bb = cat[:, edge_mask.argsort()[:]]
         
         self_indx1,self_indx2 = self_connection_index(cat,aa1),self_connection_index(cat,aa2)
         conn1,conn2 = delete_self(aa1,self_indx1),delete_self(aa2,self_indx2)
         sorted_conn2 = sort2edge(cat,conn1,conn2)
-        conn1_rev,sorted_conn2_rev = revere_indexes(conn1[0]),revere_indexes(sorted_conn2)
         
-        edge_index_new = torch.tensor(np.delete(np.array(bb),np.append(conn1_rev[:num_users],sorted_conn2_rev[:num_users]),1)) # removing the edges
+        asd = sample(list(conn1[0]),num_users) #random sampling
+        qwe = find_indx(asd,conn1[0]) 
+        fgh = sorted_conn2[qwe] #indexes of the edges from the other side of the connection.
+        
+        edge_index_new = torch.tensor(np.delete(np.array(bb),np.append(asd,list(fgh)),1)) # removing the edges
 
     #using this features to predict the class:
         log_logists_new = model(x,edge_index_new)
@@ -136,7 +142,6 @@ for user in test_index[0:10]:
         num_us.append(num_users)
         user_id.append(U_test[user_add])
     user_add += 1
-
 
 df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_users','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
@@ -154,13 +159,13 @@ for i in percent:
     acc_pts.append(accuracy)
 
 
-df1.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_edges.csv',index=False)
+df1.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_edges_random.csv',index=False)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_edges_rm_random.txt", "wb") as fp: 
     pickle.dump(mean_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_edges_rm_random.txt", "wb") as fp: 
     pickle.dump(median_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_edges_rm_random.txt", "wb") as fp: 
     pickle.dump(acc_pts, fp)

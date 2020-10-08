@@ -2,6 +2,7 @@ from libraries import *
 from geo import Geo
 from load_functions import *
 from eval_functions import *
+from utilities import *
 
 
 dataset = 'geotext'
@@ -41,7 +42,15 @@ if osp.exists(model_path):
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-#returns the non_zero edges based on the explained priority:
+explainer = GNNExplainer(model, epochs=200)
+
+def sorted_indexes(nz_indexes):
+    
+    indices = [node_feat_mask.argsort().tolist().index(i) for i in tqdm(nz_indexes)]
+    prio_nz_indices = [i[1] for i in sorted(list(zip(indices,nz_indexes)))]
+    
+    return prio_nz_indices
+
 def priority_edges(edge_index,user):
     aa = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
     bb = edge_index[:, edge_mask.argsort()[:]][:,aa]
@@ -82,7 +91,18 @@ def sort2edge(cat,aa3,aa4):
 def revere_indexes(r):
     return r[::-1]
 
-explainer = GNNExplainer(model, epochs=200)
+def find_indx(ls1,ls2):
+    ls= []
+    for i in ls1:
+        cnt=0
+        for j in ls2:
+            if i==j:
+                ls.append(cnt)
+            cnt+=1 
+    return ls
+
+
+#random removal:
 
 test_index = np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test)).tolist()
 hav_distance = [] #distance between the true and predcited labels for each user
@@ -90,77 +110,86 @@ latlon_tr = [] #true latitutde and longitude of the users
 latlon_pre = []# predicted latitude and longitude of the users
 accuracy = []
 num_us = []
+num_feat = []
 user_id = []
 user_add = 0
+
+rand_numbers = np.arange(9467)
+rand_edges = np.arange(211451)
 
 for user in test_index[0:10]:
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
-
-    #priotizig the edges based on explaination
+    
+    #retrieving the non-zero indexes of the features
+    nz_indexes = np.array(x[user]).nonzero()[0]
+    
+    #prio. edges based on explaination and edges related to the particular user
     prio_edge = priority_edges(edge_index,user)
-    aa1 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
-    aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
     
     
-    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)]:
+    for num_features,num_edges in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)-1])):
+        
+        x_feature_rm = x.detach().clone()
+        top_features = sample(list(rand_numbers),num_features)
+        x_feature_rm[user][top_features]=0
+        
     #------------------------------------------------------------
         Adj_mat = A.copy()
         Adj_mat.setdiag(1)
         Adj_mat[Adj_mat>0] = 1
-    #------------------------------------------------------------        
-#         for indexes in range(num_users):
-#             Adj_mat[prio_edge[0][indexes],prio_edge[1][indexes]]= 0
-#             Adj_mat[prio_edge[1][indexes],prio_edge[0][indexes]]= 0
+        
         Adj_mat = Adj_mat.tocoo()
         
         cat = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
-        
         bb = cat[:, edge_mask.argsort()[:]]
         
         self_indx1,self_indx2 = self_connection_index(cat,aa1),self_connection_index(cat,aa2)
         conn1,conn2 = delete_self(aa1,self_indx1),delete_self(aa2,self_indx2)
         sorted_conn2 = sort2edge(cat,conn1,conn2)
-        conn1_rev,sorted_conn2_rev = revere_indexes(conn1[0]),revere_indexes(sorted_conn2)
         
-        edge_index_new = torch.tensor(np.delete(np.array(bb),np.append(conn1_rev[:num_users],sorted_conn2_rev[:num_users]),1)) # removing the edges
+        asd = sample(list(conn1[0]),num_users) #random sampling
+        qwe = find_indx(asd,conn1[0]) 
+        fgh = sorted_conn2[qwe] #indexes of the edges from the other side of the connection.
+        
+        edge_index_new = torch.tensor(np.delete(np.array(bb),np.append(asd,list(fgh)),1)) # removing the edges
 
+        #edge_index_new = torch.tensor(np.delete(np.array(cat),sample(rand_edges,edges),1)) #random removal of edges.
+        
     #using this features to predict the class:
-        log_logists_new = model(x,edge_index_new)
+        log_logists_new = model(x_feature_rm,edge_index_new)
         y_pred_test_new = torch.argmax(log_logists_new, dim=1)[np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test))][user_add]
         distances, acc_at_161, latlon_true, latlon_pred = geo_eval_trail(Y_test[user_add], np.array(y_pred_test_new), U_test[user_add], classLatMedian, classLonMedian, userLocation)
         hav_distance.append(distances[0])
         latlon_tr.append(latlon_true[0])
         latlon_pre.append(latlon_pred[0])
         accuracy.append(acc_at_161)
-        num_us.append(num_users)
+        num_us.append(num_edges)
+        num_feat.append(num_features)
         user_id.append(U_test[user_add])
     user_add += 1
 
-
-df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_users','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
-
+df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *100
+df4['percent'] = percent *100
 
-mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
-median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]
+mean_pts = [np.mean(df4[df4['percent']==i]['haversine_distance']) for i in percent]
+median_pts = [np.median(df4[df4['percent']==i]['haversine_distance']) for i in percent]
 
 acc_pts = []
 for i in percent:
-    dist = list(df1[df1['percent']==i]['haversine_distance'])
+    dist = list(df4[df4['percent']==i]['haversine_distance'])
     accuracy= len([d for d in dist if d < 161]) / float(len(dist))
     acc_pts.append(accuracy)
 
+df4.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_both_random.csv',index=False)
 
-df1.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_edges.csv',index=False)
-
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_both_rm_random.txt", "wb") as fp: 
     pickle.dump(mean_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_both_rm_random.txt", "wb") as fp: 
     pickle.dump(median_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_edges_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_both_rm_random.txt", "wb") as fp: 
     pickle.dump(acc_pts, fp)

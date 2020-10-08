@@ -2,6 +2,7 @@ from libraries import *
 from geo import Geo
 from load_functions import *
 from eval_functions import *
+from utilities import *
 
 
 dataset = 'geotext'
@@ -56,6 +57,42 @@ def priority_edges(edge_index,user):
     
     return bb[:,0]
 
+#index of the same element:
+#cat = explained edge_indexes
+def self_connection_index(cat,aa):
+    bb = cat[:, edge_mask.argsort()[:]]
+    xx = bb[:,aa[0]]
+    vv = np.array(xx)
+    for i in range(len(vv[0])):
+        if vv[0][i]==vv[1][i]:
+            return i
+#deleting self indexes from the indexes to be removed:
+def delete_self(aa,index):
+    aa3 = np.delete(aa,index,1)
+    return aa3
+
+#sorting the other connection index, based on the intial indexes(in the future,it would to easier to remove both edges at the same time)
+def sort2edge(cat,aa3,aa4):
+    bb = cat[:, edge_mask.argsort()[:]]
+    ee = bb[:,aa3[0]]
+    ff = bb[:,aa4[0]]
+    ls = []
+    for i in ff[0]:
+        cnt = 0
+        for j in ee[1]:
+            if i==j:
+                ls.append(cnt)
+            cnt +=1
+    r = np.arange(len(aa4[0]))
+    np.put(r,ls,list(aa4[0]))
+    return r
+
+#revering indexes:
+def revere_indexes(r):
+    return r[::-1]
+
+#for both features and edges:
+
 test_index = np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test)).tolist()
 hav_distance = [] #distance between the true and predcited labels for each user
 latlon_tr = [] #true latitutde and longitude of the users
@@ -66,7 +103,7 @@ num_feat = []
 user_id = []
 user_add = 0
 
-for user in test_index[0:100]:
+for user in test_index[0:10]:
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
     
@@ -83,18 +120,26 @@ for user in test_index[0:100]:
     for num_features,num_edges in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)])):
         
         x_feature_rm = x.detach().clone()
-        top_features = top_nz_indexes[:num_features]
+        top_features = top_nz_indexes[-num_features:]
         x_feature_rm[user][top_features]=0
         
     #------------------------------------------------------------
         Adj_mat = A.copy()
         Adj_mat.setdiag(1)
         Adj_mat[Adj_mat>0] = 1
-    #------------------------------------------------------------        
-        for indexes in range(num_edges):
-            Adj_mat[prio_edge[0][indexes],prio_edge[1][indexes]]= 0
+        
         Adj_mat = Adj_mat.tocoo()
-        edge_index_new = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
+        
+        cat = torch.tensor([Adj_mat.row, Adj_mat.col], dtype=torch.long)
+        
+        bb = cat[:, edge_mask.argsort()[:]]
+        
+        self_indx1,self_indx2 = self_connection_index(cat,aa1),self_connection_index(cat,aa2)
+        conn1,conn2 = delete_self(aa1,self_indx1),delete_self(aa2,self_indx2)
+        sorted_conn2 = sort2edge(cat,conn1,conn2)
+        conn1_rev,sorted_conn2_rev = revere_indexes(conn1[0]),revere_indexes(sorted_conn2)
+        
+        edge_index_new = torch.tensor(np.delete(np.array(bb),np.append(conn1_rev[:num_users],sorted_conn2_rev[:num_users]),1)) # removing the edges
 
     #using this features to predict the class:
         log_logists_new = model(x_feature_rm,edge_index_new)
@@ -108,6 +153,7 @@ for user in test_index[0:100]:
         num_feat.append(num_features)
         user_id.append(U_test[user_add])
     user_add += 1
+
 
 df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 

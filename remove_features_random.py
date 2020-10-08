@@ -2,10 +2,9 @@ from libraries import *
 from geo import Geo
 from load_functions import *
 from eval_functions import *
-from utilities import *
 
 dataset = 'geotext'
-path = "C:\\Users\\61484\\Graph_Convolutional_networks\\data\\geo"
+path = "C:\\Users\\61484\\Graph_Convolutional_Networks\\data\\geo"
 dataset = Geo(path, dataset, transform=None)
 data = dataset[0]
 
@@ -41,18 +40,6 @@ if osp.exists(model_path):
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-print(model)
-
-def sorted_indexes(nz_indexes):
-    
-    indices = [node_feat_mask.argsort().tolist().index(i) for i in tqdm(nz_indexes)]
-    prio_nz_indices = [i[1] for i in sorted(list(zip(indices,nz_indexes)))]
-    
-    return prio_nz_indices
-
-explainer = GNNExplainer(model, epochs=200)
-
-
 
 test_index = np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test)).tolist()
 hav_distance = [] #distance between the true and predcited labels for each user
@@ -63,42 +50,39 @@ num_us = []
 user_id = []
 pred_act = []
 pred_pred = []
-percen = []
-count = 0
+i = 0
 
+rand_numbers = np.arange(9467)
 
-for user in tqdm(test_index[0:100]):
-   
+for user in tqdm(test_index[0:10]):
+    #-------------------------------------
     log_logists = model(x, edge_index)
     y_pred_test = torch.argmax(log_logists, dim=1)[np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test))]
-    y_pred_test = y_pred_test.detach().numpy()[count]
+    y_pred_test = y_pred_test.detach().numpy()[i]
     pred_act.append(y_pred_test)
-    
-    #explaining the node
-    node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
+    #---------------------------------------
+    #node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
     
     #getting the non-zero indexes
     nz_indexes = np.array(x[user]).nonzero()[0]
     
-    #sorting the non-zero indexes based on explained priority
-    top_nz_indexes = sorted_indexes(nz_indexes)
-           
-    #looping throught the number of features removed:
-    for num_features in tqdm([perc(top_nz_indexes,0),perc(top_nz_indexes,0.05),perc(top_nz_indexes,0.10),perc(top_nz_indexes,0.20),perc(top_nz_indexes,0.40),perc(top_nz_indexes,0.60),perc(top_nz_indexes,0.80),perc(top_nz_indexes,1)]):
+    
+    for num_features in [perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)]:
         x_feature_rm = x.detach().clone()
-        top_features = top_nz_indexes[-num_features:]
+        top_features = sample(list(rand_numbers),num_features)#random sampling of features.
+        #top_features = node_feat_mask.argsort()[-num_features:].tolist()
         x_feature_rm[user][top_features]=0
         log_logists_new = model(x_feature_rm, edge_index)
         y_pred_test_new = torch.argmax(log_logists_new, dim=1)[user]
         pred_pred.append(y_pred_test_new)
-        distances, acc_at_161, latlon_true, latlon_pred = geo_eval_trail(Y_test[count], np.array(y_pred_test_new), U_test[count], classLatMedian, classLonMedian, userLocation)
+        distances, acc_at_161, latlon_true, latlon_pred = geo_eval_trail(Y_test[i], np.array(y_pred_test_new), U_test[i], classLatMedian, classLonMedian, userLocation)
         hav_distance.append(distances[0])
         latlon_tr.append(latlon_true[0])
         latlon_pre.append(latlon_pred[0])
         accuracy.append(acc_at_161)
-        num_us.append(num_features)
-        user_id.append(U_test[count])
-    count += 1
+        #num_us.append(num_users)
+        user_id.append(U_test[i])
+    i += 1
     #print(f"mean:{mean} median: {median} acc: {acc}")
     #after.append(y_pred_test_new)
     #print(f"after {y_pred_test_new}")
@@ -119,16 +103,13 @@ for i in percent:
     acc_pts.append(accuracy)
 
 
-df1.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_features.csv',index=False)
+df1.to_csv('C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_features_random.csv',index=False)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_feature_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\mean_pts_feature_rm_random.txt", "wb") as fp: 
     pickle.dump(mean_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_feature_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\median_pts_feature_rm_random.txt", "wb") as fp: 
     pickle.dump(median_pts, fp)
 
-with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_feature_rm.txt", "wb") as fp: 
+with open("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\acc_pts_feature_rm_random.txt", "wb") as fp: 
     pickle.dump(acc_pts, fp)
-
-
-
