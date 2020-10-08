@@ -2,7 +2,7 @@ from libraries import *
 
 df1 = pd.read_csv("C:\\Users\\61484\\Graph_Convolutional_Networks\\saved_files\\remove_features.csv")
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *100
+df1['percent'] = percent *10
 
 mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]
