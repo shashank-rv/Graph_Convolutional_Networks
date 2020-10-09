@@ -93,6 +93,7 @@ def find_indx(ls1,ls2):
     return ls
 
 
+explainer = GNNExplainer(model, epochs=200)
 
 #random removal of edges:
 test_index = np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test)).tolist()
@@ -107,10 +108,16 @@ user_add = 0
 rand_edges = np.arange(211451)
 
 for user in tqdm(test_index[0:10]):
+    #explaining the node
+    node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
+
     #priotizig the edges based on explaination
     prio_edge = priority_edges(edge_index,user)    
+
+    aa1 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
+    aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
     
-    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)-1]:
+    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05)-1,perc(prio_edge[0],0.10)-1,perc(prio_edge[0],0.20)-1,perc(prio_edge[0],0.40)-1,perc(prio_edge[0],0.60)-1,perc(prio_edge[0],0.80)-1,perc(prio_edge[0],1)-1]:
     #------------------------------------------------------------
         Adj_mat = A.copy()
         Adj_mat.setdiag(1)
@@ -147,7 +154,7 @@ df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,acc
 
 
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *100
+df1['percent'] = percent *10
 
 mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]

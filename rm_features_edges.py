@@ -115,9 +115,12 @@ for user in test_index[0:10]:
     
     #prio. edges based on explaination and edges related to the particular user
     prio_edge = priority_edges(edge_index,user)
+
+    aa1 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
+    aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
     
     
-    for num_features,num_edges in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)])):
+    for num_features,num_users in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)])):
         
         x_feature_rm = x.detach().clone()
         top_features = top_nz_indexes[-num_features:]
@@ -149,7 +152,7 @@ for user in test_index[0:10]:
         latlon_tr.append(latlon_true[0])
         latlon_pre.append(latlon_pred[0])
         accuracy.append(acc_at_161)
-        num_us.append(num_edges)
+        num_us.append(num_users)
         num_feat.append(num_features)
         user_id.append(U_test[user_add])
     user_add += 1
@@ -158,7 +161,7 @@ for user in test_index[0:10]:
 df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
 percent = [0,5,10,20,40,60,80,100]
-df4['percent'] = percent *100
+df4['percent'] = percent *10
 
 mean_pts = [np.mean(df4[df4['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df4[df4['percent']==i]['haversine_distance']) for i in percent]

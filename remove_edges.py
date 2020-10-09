@@ -142,7 +142,7 @@ df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,acc
 
 
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *100
+df1['percent'] = percent *10
 
 mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]
