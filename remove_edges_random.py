@@ -107,7 +107,7 @@ user_add = 0
 
 rand_edges = np.arange(211451)
 
-for user in tqdm(test_index[0:10]):
+for user in tqdm(test_index[0:100]):
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
 
@@ -154,7 +154,7 @@ df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,acc
 
 
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *10
+df1['percent'] = percent *100
 
 mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]

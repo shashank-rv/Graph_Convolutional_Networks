@@ -54,7 +54,7 @@ i = 0
 
 rand_numbers = np.arange(9467)
 
-for user in tqdm(test_index[0:2]):
+for user in tqdm(test_index[0:100]):
     #-------------------------------------
     log_logists = model(x, edge_index)
     y_pred_test = torch.argmax(log_logists, dim=1)[np.arange(len(U_train + U_dev), len(U_train + U_dev + U_test))]
@@ -91,7 +91,7 @@ df1 = pd.DataFrame(list(zip(user_id,num_us,latlon_tr,latlon_pre,hav_distance,acc
 
 
 percent = [0,5,10,20,40,60,80,100]
-df1['percent'] = percent *2
+df1['percent'] = percent *100
 
 mean_pts = [np.mean(df1[df1['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df1[df1['percent']==i]['haversine_distance']) for i in percent]
