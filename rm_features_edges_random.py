@@ -114,10 +114,8 @@ num_feat = []
 user_id = []
 user_add = 0
 
-rand_numbers = np.arange(9467)
-rand_edges = np.arange(211451)
 
-for user in test_index[0:100]:
+for user in test_index[0:10]:
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
     
@@ -131,10 +129,10 @@ for user in test_index[0:100]:
     aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
     
     
-    for num_features,num_edges in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05)-1,perc(prio_edge[0],0.10)-1,perc(prio_edge[0],0.20)-1,perc(prio_edge[0],0.40)-1,perc(prio_edge[0],0.60)-1,perc(prio_edge[0],0.80)-1,perc(prio_edge[0],1)-1])):
+    for num_features,num_edges in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)])):
         
         x_feature_rm = x.detach().clone()
-        top_features = sample(list(rand_numbers),num_features)
+        top_features = sample(list(nz_indexes),num_features)
         x_feature_rm[user][top_features]=0
         
     #------------------------------------------------------------
@@ -151,7 +149,10 @@ for user in test_index[0:100]:
         conn1,conn2 = delete_self(aa1,self_indx1),delete_self(aa2,self_indx2)
         sorted_conn2 = sort2edge(cat,conn1,conn2)
         
-        asd = sample(list(conn1[0]),num_edges) #random sampling
+        try:
+            asd = sample(list(conn1[0]),num_edges) #random sampling
+        except ValueError:
+            asd = sample(list(conn1[0]),num_edges-1)
         qwe = find_indx(asd,conn1[0]) 
         fgh = sorted_conn2[qwe] #indexes of the edges from the other side of the connection.
         
@@ -175,7 +176,7 @@ for user in test_index[0:100]:
 df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
 percent = [0,5,10,20,40,60,80,100]
-df4['percent'] = percent *100
+df4['percent'] = percent *10
 
 mean_pts = [np.mean(df4[df4['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df4[df4['percent']==i]['haversine_distance']) for i in percent]

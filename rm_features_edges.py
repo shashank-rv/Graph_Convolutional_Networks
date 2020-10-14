@@ -103,7 +103,7 @@ num_feat = []
 user_id = []
 user_add = 0
 
-for user in test_index[0:100]:
+for user in test_index[0:10]:
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
     
@@ -123,7 +123,10 @@ for user in test_index[0:100]:
     for num_features,num_users in list(zip([perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)],[perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)])):
         
         x_feature_rm = x.detach().clone()
-        top_features = top_nz_indexes[-num_features:]
+        if  num_features == 0:
+            top_features = []
+        else:
+            top_features = top_nz_indexes[-num_features:]
         x_feature_rm[user][top_features]=0
         
     #------------------------------------------------------------
@@ -161,7 +164,7 @@ for user in test_index[0:100]:
 df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
 percent = [0,5,10,20,40,60,80,100]
-df4['percent'] = percent *100
+df4['percent'] = percent *10
 
 mean_pts = [np.mean(df4[df4['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df4[df4['percent']==i]['haversine_distance']) for i in percent]

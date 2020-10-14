@@ -86,7 +86,10 @@ for user in tqdm(test_index[0:100]):
     #looping throught the number of features removed:
     for num_features in tqdm([perc(top_nz_indexes,0),perc(top_nz_indexes,0.05),perc(top_nz_indexes,0.10),perc(top_nz_indexes,0.20),perc(top_nz_indexes,0.40),perc(top_nz_indexes,0.60),perc(top_nz_indexes,0.80),perc(top_nz_indexes,1)]):
         x_feature_rm = x.detach().clone()
-        top_features = top_nz_indexes[-num_features:]
+        if num_features == 0:
+            top_features = []
+        else:
+            top_features = top_nz_indexes[-num_features:]
         x_feature_rm[user][top_features]=0
         log_logists_new = model(x_feature_rm, edge_index)
         y_pred_test_new = torch.argmax(log_logists_new, dim=1)[user]

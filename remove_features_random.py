@@ -52,7 +52,6 @@ pred_act = []
 pred_pred = []
 i = 0
 
-rand_numbers = np.arange(9467)
 
 for user in tqdm(test_index[0:100]):
     #-------------------------------------
@@ -69,7 +68,7 @@ for user in tqdm(test_index[0:100]):
     
     for num_features in [perc(nz_indexes,0),perc(nz_indexes,0.05),perc(nz_indexes,0.10),perc(nz_indexes,0.20),perc(nz_indexes,0.40),perc(nz_indexes,0.60),perc(nz_indexes,0.80),perc(nz_indexes,1)]:
         x_feature_rm = x.detach().clone()
-        top_features = sample(list(rand_numbers),num_features)#random sampling of features.
+        top_features = sample(list(nz_indexes),num_features)#random sampling of features.
         #top_features = node_feat_mask.argsort()[-num_features:].tolist()
         x_feature_rm[user][top_features]=0
         log_logists_new = model(x_feature_rm, edge_index)
