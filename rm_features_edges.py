@@ -103,7 +103,7 @@ num_feat = []
 user_id = []
 user_add = 0
 
-for user in test_index[0:10]:
+for user in test_index[0:100]:
     #explaining the node
     node_feat_mask, edge_mask = explainer.explain_node(user, x, edge_index)
     
@@ -164,7 +164,7 @@ for user in test_index[0:10]:
 df4 = pd.DataFrame(list(zip(user_id,num_feat,num_us,latlon_tr,latlon_pre,hav_distance,accuracy)),columns =['user','num_features','num_edges','latlon_tru','latlon_pred','haversine_distance',"acc_at_161"])
 
 percent = [0,5,10,20,40,60,80,100]
-df4['percent'] = percent *10
+df4['percent'] = percent *100
 
 mean_pts = [np.mean(df4[df4['percent']==i]['haversine_distance']) for i in percent]
 median_pts = [np.median(df4[df4['percent']==i]['haversine_distance']) for i in percent]

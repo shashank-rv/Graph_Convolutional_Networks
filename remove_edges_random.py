@@ -117,7 +117,7 @@ for user in tqdm(test_index[0:100]):
     aa1 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][0])==user)
     aa2 = np.where(np.array(edge_index[:, edge_mask.argsort()[:]][1])==user)
     
-    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05)-1,perc(prio_edge[0],0.10)-1,perc(prio_edge[0],0.20)-1,perc(prio_edge[0],0.40)-1,perc(prio_edge[0],0.60)-1,perc(prio_edge[0],0.80)-1,perc(prio_edge[0],1)-1]:
+    for num_users in [perc(prio_edge[0],0),perc(prio_edge[0],0.05),perc(prio_edge[0],0.10),perc(prio_edge[0],0.20),perc(prio_edge[0],0.40),perc(prio_edge[0],0.60),perc(prio_edge[0],0.80),perc(prio_edge[0],1)]:
     #------------------------------------------------------------
         Adj_mat = A.copy()
         Adj_mat.setdiag(1)
@@ -132,7 +132,10 @@ for user in tqdm(test_index[0:100]):
         conn1,conn2 = delete_self(aa1,self_indx1),delete_self(aa2,self_indx2)
         sorted_conn2 = sort2edge(cat,conn1,conn2)
         
-        asd = sample(list(conn1[0]),num_users) #random sampling
+        try:
+            asd = sample(list(conn1[0]),num_users) #random sampling
+        except ValueError:
+            asd = sample(list(conn1[0]),num_users-1)
         qwe = find_indx(asd,conn1[0]) 
         fgh = sorted_conn2[qwe] #indexes of the edges from the other side of the connection.
         
